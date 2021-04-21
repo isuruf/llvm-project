@@ -725,6 +725,11 @@ hasPartialIVCondition(Loop *L, MemorySSA &MSSA, AAResults *AA) {
           WorkList.append(succ_begin(Current), succ_end(Current));
         }
 
+        // Require at least 2 blocks on a path through the loop. This skips
+        // paths that directly exit the loop.
+        if (Seen.size() < 2)
+          return false;
+
         // Next, check if there are any MemoryDefs that are on the path through
         // the loop (in the Seen set) and they may-alias any of the locations in
         // AccessedLocs. If that is the case, they may modify the condition and
@@ -760,6 +765,11 @@ hasPartialIVCondition(Loop *L, MemorySSA &MSSA, AAResults *AA) {
 
         return true;
       };
+
+  // If we branch to the same successor, partial unswitching will not be
+  // beneficial.
+  if (TI->getSuccessor(0) == TI->getSuccessor(1))
+    return {};
 
   if (HasNoClobbersOnPath(TI->getSuccessor(0), L->getHeader(), AccessesToCheck))
     return {ToDuplicate, ConstantInt::getTrue(TI->getContext())};
@@ -1104,12 +1114,16 @@ void LoopUnswitch::emitPreheaderBranchOnCondition(
 
         Loop *L = LI->getLoopFor(I->getParent());
         auto *DefiningAccess = MemA->getDefiningAccess();
-        // If the defining access is a MemoryPhi in the header, get the incoming
-        // value for the pre-header as defining access.
-        if (DefiningAccess->getBlock() == I->getParent()) {
+        // Get the first defining access before the loop.
+        while (L->contains(DefiningAccess->getBlock())) {
+          // If the defining access is a MemoryPhi, get the incoming
+          // value for the pre-header as defining access.
           if (auto *MemPhi = dyn_cast<MemoryPhi>(DefiningAccess)) {
             DefiningAccess =
                 MemPhi->getIncomingValueForBlock(L->getLoopPreheader());
+          } else {
+            DefiningAccess =
+                cast<MemoryDef>(DefiningAccess)->getDefiningAccess();
           }
         }
         MSSAU->createMemoryAccessInBB(New, DefiningAccess, New->getParent(),

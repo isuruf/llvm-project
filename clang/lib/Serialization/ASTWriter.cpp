@@ -3978,6 +3978,7 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
     Record.push_back(V.Enabled ? 1 : 0);
     Record.push_back(V.Avail);
     Record.push_back(V.Core);
+    Record.push_back(V.Opt);
   }
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
@@ -5666,6 +5667,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     Record->push_back(Lambda.NumExplicitCaptures);
     Record->push_back(Lambda.HasKnownInternalLinkage);
     Record->push_back(Lambda.ManglingNumber);
+    Record->push_back(D->getDeviceLambdaManglingNumber());
     AddDeclRef(D->getLambdaContextDecl());
     AddTypeSourceInfo(Lambda.MethodTyInfo);
     for (unsigned I = 0, N = Lambda.NumCaptures; I != N; ++I) {

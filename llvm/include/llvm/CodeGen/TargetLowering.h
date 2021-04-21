@@ -2785,6 +2785,10 @@ public:
     return false;
   }
 
+  /// Does this target require the clearing of high-order bits in a register
+  /// passed to the fp16 to fp conversion library function.
+  virtual bool shouldKeepZExtForFP16Conv() const { return false; }
+
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
   //
@@ -3116,16 +3120,6 @@ protected:
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
   MachineBasicBlock *emitPatchPoint(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const;
-
-  /// Replace/modify the XRay custom event operands with target-dependent
-  /// details.
-  MachineBasicBlock *emitXRayCustomEvent(MachineInstr &MI,
-                                         MachineBasicBlock *MBB) const;
-
-  /// Replace/modify the XRay typed event operands with target-dependent
-  /// details.
-  MachineBasicBlock *emitXRayTypedEvent(MachineInstr &MI,
-                                        MachineBasicBlock *MBB) const;
 
   bool IsStrictFPEnabled;
 };
@@ -4287,9 +4281,7 @@ public:
   /// comparison may check if the operand is NAN, INF, zero, normal, etc. The
   /// result should be used as the condition operand for a select or branch.
   virtual SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                                   const DenormalMode &Mode) const {
-    return SDValue();
-  }
+                                   const DenormalMode &Mode) const;
 
   /// Return a target-dependent result if the input operand is not suitable for
   /// use with a square root estimate calculation.
